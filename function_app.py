@@ -2,6 +2,7 @@ import azure.functions as func
 import json
 import logging
 from jsonrpc_handler import JsonRpcHandler
+from mcp_handler import McpHandler
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
@@ -48,6 +49,29 @@ def jsonrpc(req: func.HttpRequest) -> func.HttpResponse:
     # Handle the JSON-RPC request
     response = JsonRpcHandler.handle_request(req_body)
     
+    return func.HttpResponse(
+        body=json.dumps(response),
+        status_code=200,
+        mimetype="application/json"
+    )
+
+
+@app.route(route="mcp", methods=["POST"])
+def mcp(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('MCP handler processed a request.')
+
+    try:
+        req_body = req.get_json()
+    except ValueError:
+        error_response = {"error": {"code": -32700, "message": "Parse error"}}
+        return func.HttpResponse(
+            json.dumps(error_response),
+            status_code=400,
+            mimetype="application/json"
+        )
+
+    response = McpHandler.handle_request(req_body)
+
     return func.HttpResponse(
         body=json.dumps(response),
         status_code=200,

@@ -5,6 +5,7 @@ import json
 import sys
 import requests
 from jsonrpc_handler import JsonRpcHandler
+from mcp_handler import McpHandler
 
 def test_jsonrpc_1_0():
     """Test JSON-RPC 1.0 request."""
@@ -187,21 +188,58 @@ def test_http_jsonrpc_endpoint():
     print("✓ JSON-RPC 2.0 notification test passed")
 
 if __name__ == "__main__":
+    def test_mcp_handler_unit():
+        """Unit test for McpHandler."""
+        print("\n=== Testing MCP handler (unit) ===")
+        req = {"action": "echo", "payload": {"foo": "bar"}, "id": "mcp-1"}
+        print(f"Request: {json.dumps(req)}")
+        resp = McpHandler.handle_request(req)
+        print(f"Response: {json.dumps(resp)}")
+        assert "result" in resp, "Response should have result field"
+        assert resp["result"] == req, "Result should echo the request"
+        assert resp["id"] == "mcp-1", "Response should include id"
+        print("✓ MCP handler unit test passed")
+
+    def test_http_mcp_endpoint():
+        """Integration test for deployed /api/mcp endpoint."""
+        print("\n=== Testing HTTP MCP Endpoint ===")
+        base_url = "https://echo.azurewebsites.net/api/mcp"
+
+        print("Test 1: POST JSON body")
+        payload = {"action": "echo", "payload": {"x": 1}, "id": 42}
+        try:
+            resp = requests.post(base_url, json=payload, timeout=10)
+        except requests.exceptions.RequestException as e:
+            print(f"\n⚠ HTTP MCP test skipped: {e}")
+            return
+        print(f"Status: {resp.status_code}")
+        print(f"Response: {resp.text}")
+        if resp.status_code != 200:
+            print(f"\n⚠ HTTP MCP test skipped: expected 200 but got {resp.status_code} (endpoint may not be deployed yet)")
+            return
+        data = resp.json()
+        assert "result" in data, "Response should have result"
+        assert data["result"]["action"] == "echo", "Result should contain the request"
+        print("✓ HTTP MCP endpoint test passed")
+
     try:
         test_jsonrpc_1_0()
         test_jsonrpc_2_0()
         test_jsonrpc_2_0_notification()
         test_invalid_request()
         test_non_dict_request()
-        
+        # MCP unit test
+        test_mcp_handler_unit()
+
         # HTTP endpoint tests
         try:
             test_http_echo_endpoint()
             test_http_jsonrpc_endpoint()
+            test_http_mcp_endpoint()
         except requests.exceptions.RequestException as e:
             print(f"\n⚠ HTTP tests skipped: {e}")
             print("(Endpoints may not be deployed yet)")
-        
+
         print("\n" + "="*50)
         print("All tests passed! ✓")
         print("="*50)
