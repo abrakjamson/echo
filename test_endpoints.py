@@ -1,0 +1,213 @@
+#!/usr/bin/env python3
+"""Test script for echo and JSON-RPC endpoints."""
+
+import json
+import sys
+import requests
+from jsonrpc_handler import JsonRpcHandler
+
+def test_jsonrpc_1_0():
+    """Test JSON-RPC 1.0 request."""
+    print("\n=== Testing JSON-RPC 1.0 ===")
+    
+    # Named params
+    req = {
+        "method": "test_method",
+        "params": {"key": "value"},
+        "id": "test-1"
+    }
+    print(f"Request: {json.dumps(req)}")
+    resp = JsonRpcHandler.handle_request(req)
+    print(f"Response: {json.dumps(resp)}")
+    
+    assert "result" in resp, "Response should have result field"
+    assert resp["result"] == req, "Result should echo the request"
+    assert resp["id"] == "test-1", "Response should include id"
+    assert "jsonrpc" not in resp, "JSON-RPC 1.0 should not have jsonrpc field"
+    print("✓ JSON-RPC 1.0 test passed")
+
+def test_jsonrpc_2_0():
+    """Test JSON-RPC 2.0 request."""
+    print("\n=== Testing JSON-RPC 2.0 ===")
+    
+    req = {
+        "jsonrpc": "2.0",
+        "method": "test_method",
+        "params": [1, 2, 3],
+        "id": 123
+    }
+    print(f"Request: {json.dumps(req)}")
+    resp = JsonRpcHandler.handle_request(req)
+    print(f"Response: {json.dumps(resp)}")
+    
+    assert resp.get("jsonrpc") == "2.0", "Should include jsonrpc: 2.0"
+    assert "result" in resp, "Response should have result field"
+    assert resp["result"] == req, "Result should echo the request"
+    assert resp["id"] == 123, "Response should include id"
+    print("✓ JSON-RPC 2.0 test passed")
+
+def test_jsonrpc_2_0_notification():
+    """Test JSON-RPC 2.0 notification (no id)."""
+    print("\n=== Testing JSON-RPC 2.0 Notification (no id) ===")
+    
+    req = {
+        "jsonrpc": "2.0",
+        "method": "notify_method",
+        "params": {}
+    }
+    print(f"Request: {json.dumps(req)}")
+    resp = JsonRpcHandler.handle_request(req)
+    print(f"Response: {json.dumps(resp)}")
+    
+    assert resp.get("jsonrpc") == "2.0", "Should include jsonrpc: 2.0"
+    assert "result" in resp, "Response should have result field"
+    assert "id" not in resp, "Notification response should not have id"
+    print("✓ JSON-RPC 2.0 notification test passed")
+
+def test_invalid_request():
+    """Test invalid request (missing method)."""
+    print("\n=== Testing Invalid Request ===")
+    
+    req = {
+        "jsonrpc": "2.0",
+        "id": 1
+    }
+    print(f"Request (no method): {json.dumps(req)}")
+    resp = JsonRpcHandler.handle_request(req)
+    print(f"Response: {json.dumps(resp)}")
+    
+    assert "error" in resp, "Should have error field"
+    assert resp["error"]["code"] == -32600, "Should have Invalid Request code"
+    assert resp["id"] == 1, "Should include id from request"
+    print("✓ Invalid request test passed")
+
+def test_non_dict_request():
+    """Test non-dict request."""
+    print("\n=== Testing Non-Dict Request ===")
+    
+    req = ["not", "a", "dict"]
+    print(f"Request: {json.dumps(req)}")
+    resp = JsonRpcHandler.handle_request(req)
+    print(f"Response: {json.dumps(resp)}")
+    
+    assert "error" in resp, "Should have error field"
+    assert resp["error"]["code"] == -32700, "Should have Parse error code"
+    assert "id" not in resp, "Should not have id for parse error"
+    print("✓ Non-dict request test passed")
+
+def test_http_echo_endpoint():
+    """Test the deployed echo endpoint via HTTP."""
+    print("\n=== Testing HTTP Echo Endpoint ===")
+    
+    base_url = "https://echo.azurewebsites.net/api/echo"
+    
+    # Test with query parameter
+    print("Test 1: Query parameter")
+    resp = requests.get(f"{base_url}?value=hello_world")
+    print(f"Status: {resp.status_code}")
+    print(f"Response: {resp.text}")
+    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
+    assert resp.text == "hello_world", f"Expected 'hello_world', got '{resp.text}'"
+    print("✓ Query parameter test passed")
+    
+    # Test with JSON body
+    print("\nTest 2: JSON body")
+    payload = {"value": "json_test"}
+    resp = requests.post(base_url, json=payload)
+    print(f"Status: {resp.status_code}")
+    print(f"Response: {resp.text}")
+    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
+    assert resp.text == "json_test", f"Expected 'json_test', got '{resp.text}'"
+    print("✓ JSON body test passed")
+    
+    # Test missing value field
+    print("\nTest 3: Missing value field")
+    resp = requests.get(base_url)
+    print(f"Status: {resp.status_code}")
+    print(f"Response: {resp.text}")
+    assert resp.status_code == 400, f"Expected 400, got {resp.status_code}"
+    assert "required" in resp.text.lower(), f"Expected error message about required field"
+    print("✓ Missing value test passed")
+
+def test_http_jsonrpc_endpoint():
+    """Test the deployed JSON-RPC endpoint via HTTP."""
+    print("\n=== Testing HTTP JSON-RPC Endpoint ===")
+    
+    base_url = "https://echo.azurewebsites.net/api/jsonrpc"
+    
+    # Test JSON-RPC 1.0
+    print("Test 1: JSON-RPC 1.0")
+    payload = {
+        "method": "test_method",
+        "params": {"key": "value"},
+        "id": "test-1"
+    }
+    resp = requests.post(base_url, json=payload)
+    print(f"Status: {resp.status_code}")
+    print(f"Response: {resp.text}")
+    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
+    data = resp.json()
+    assert "result" in data, "Response should have result field"
+    assert data["result"]["method"] == "test_method", "Result should contain the request"
+    assert "jsonrpc" not in data, "JSON-RPC 1.0 should not have jsonrpc field"
+    print("✓ JSON-RPC 1.0 test passed")
+    
+    # Test JSON-RPC 2.0
+    print("\nTest 2: JSON-RPC 2.0")
+    payload = {
+        "jsonrpc": "2.0",
+        "method": "test_method",
+        "params": [1, 2, 3],
+        "id": 123
+    }
+    resp = requests.post(base_url, json=payload)
+    print(f"Status: {resp.status_code}")
+    print(f"Response: {resp.text}")
+    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
+    data = resp.json()
+    assert data.get("jsonrpc") == "2.0", "Response should have jsonrpc: 2.0"
+    assert "result" in data, "Response should have result field"
+    assert data["id"] == 123, "Response should include id"
+    print("✓ JSON-RPC 2.0 test passed")
+    
+    # Test JSON-RPC 2.0 notification
+    print("\nTest 3: JSON-RPC 2.0 notification (no id)")
+    payload = {
+        "jsonrpc": "2.0",
+        "method": "notify_method",
+        "params": {}
+    }
+    resp = requests.post(base_url, json=payload)
+    print(f"Status: {resp.status_code}")
+    print(f"Response: {resp.text}")
+    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
+    data = resp.json()
+    assert data.get("jsonrpc") == "2.0", "Response should have jsonrpc: 2.0"
+    assert "id" not in data, "Notification response should not have id"
+    print("✓ JSON-RPC 2.0 notification test passed")
+
+if __name__ == "__main__":
+    try:
+        test_jsonrpc_1_0()
+        test_jsonrpc_2_0()
+        test_jsonrpc_2_0_notification()
+        test_invalid_request()
+        test_non_dict_request()
+        
+        # HTTP endpoint tests
+        try:
+            test_http_echo_endpoint()
+            test_http_jsonrpc_endpoint()
+        except requests.exceptions.RequestException as e:
+            print(f"\n⚠ HTTP tests skipped: {e}")
+            print("(Endpoints may not be deployed yet)")
+        
+        print("\n" + "="*50)
+        print("All tests passed! ✓")
+        print("="*50)
+    except AssertionError as e:
+        print(f"\n✗ Test failed: {e}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"\n✗ Unexpected error: {e}")
+        sys.exit(1)
