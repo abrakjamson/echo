@@ -124,24 +124,27 @@ Invoke-WebRequest -Uri "https://echo.azurewebsites.net/api/jsonrpc" `
 
 ### 3. MCP Endpoint (`/mcp`)
 
-Model Context Protocol handler. Echoes back the request in the response result field.
+Model Context Protocol (MCP) handler. Implements the MCP specification using JSON-RPC 2.0. Echoes back the `method` and `params` in the response `result` field.
 
 **Request Method**: POST
+
+**Spec**: [Model Context Protocol](https://modelcontextprotocol.io/)
 
 #### curl Example
 
 ```bash
 curl -X POST "https://echo.azurewebsites.net/api/mcp" \
   -H "Content-Type: application/json" \
-  -d '{"action":"echo","payload":{"key":"value"},"id":1}'
+  -d '{"jsonrpc":"2.0","method":"echo","params":{"key":"value"},"id":1}'
 ```
 
 #### PowerShell Example
 
 ```powershell
 $body = @{
-    action = "echo"
-    payload = @{ key = "value" }
+    jsonrpc = "2.0"
+    method = "echo"
+    params = @{ key = "value" }
     id = 1
 } | ConvertTo-Json
 Invoke-WebRequest -Uri "https://echo.azurewebsites.net/api/mcp" `

@@ -97,6 +97,10 @@ def mcp(req: func.HttpRequest) -> func.HttpResponse:
 
     response = McpHandler.handle_request(req_body)
 
+    # Handle JSON-RPC notifications (no response per spec)
+    if response is None:
+        return func.HttpResponse(status_code=202)
+
     return func.HttpResponse(
         body=json.dumps(response),
         status_code=200,

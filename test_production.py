@@ -64,8 +64,8 @@ def test_mcp_endpoint():
     
     try:
         payload = {
-            "action": "echo",
-            "payload": {"test": "data"},
+            "method": "echo",
+            "params": {"test": "data"},
             "id": 42
         }
         resp = requests.post(url, json=payload, timeout=10)
@@ -74,8 +74,10 @@ def test_mcp_endpoint():
         
         assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
         data = resp.json()
+        assert data.get("jsonrpc") == "2.0", "Response should have jsonrpc field"
         assert "result" in data, "Response should have result field"
-        assert data["result"]["action"] == "echo", "Result should echo the request"
+        assert data["result"]["method"] == "echo", "Result should echo the method"
+        assert data["result"]["params"] == {"test": "data"}, "Result should echo the params"
         print("✓ MCP endpoint test passed")
         return True
     except Exception as e:

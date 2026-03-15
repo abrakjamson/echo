@@ -47,6 +47,18 @@ echo_functions/
   - Maps JSON-RPC methods (`a2a.SendMessage`, etc.) to A2A operations
   - Returns responses in proper JSON-RPC 2.0 format
 
+**jsonrpc_handler.py**
+- `JsonRpcHandler.handle_request(req_body)` - Standard JSON-RPC handler
+  - Detects JSON-RPC version (1.0 or 2.0)
+  - Returns compliant echo responses
+
+**mcp_handler.py**
+- `McpHandler.handle_request(req_body)` - MCP protocol handler
+  - Implements JSON-RPC 2.0 compliant responses
+  - Echoes `method` and `params` in the `result` field
+  - Supports MCP `initialize` lifecycle method
+  - Handles JSON-RPC notifications (no response)
+
 ## How to Test
 
 ### Local Testing
@@ -97,6 +109,18 @@ curl -X POST "https://echo.azurewebsites.net/api/a2a" \
         "parts": [{"text": "hello via JSON-RPC"}]
       }
     },
+    "id": 1
+  }'
+```
+
+**Test MCP**
+```bash
+curl -X POST "https://echo.azurewebsites.net/api/mcp" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "echo",
+    "params": {"test": "data"},
     "id": 1
   }'
 ```

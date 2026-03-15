@@ -318,12 +318,15 @@ if __name__ == "__main__":
     def test_mcp_handler_unit():
         """Unit test for McpHandler."""
         print("\n=== Testing MCP handler (unit) ===")
-        req = {"action": "echo", "payload": {"foo": "bar"}, "id": "mcp-1"}
+        req = {"method": "echo", "params": {"foo": "bar"}, "id": "mcp-1"}
         print(f"Request: {json.dumps(req)}")
         resp = McpHandler.handle_request(req)
         print(f"Response: {json.dumps(resp)}")
+        
+        assert resp.get("jsonrpc") == "2.0", "Should have jsonrpc: 2.0"
         assert "result" in resp, "Response should have result field"
-        assert resp["result"] == req, "Result should echo the request"
+        assert resp["result"]["method"] == "echo", "Result should echo the method"
+        assert resp["result"]["params"] == {"foo": "bar"}, "Result should echo the params"
         assert resp["id"] == "mcp-1", "Response should include id"
         print("✓ MCP handler unit test passed")
 
@@ -333,7 +336,7 @@ if __name__ == "__main__":
         base_url = "https://echo.azurewebsites.net/api/mcp"
 
         print("Test 1: POST JSON body")
-        payload = {"action": "echo", "payload": {"x": 1}, "id": 42}
+        payload = {"method": "test", "params": {"x": 1}, "id": 42}
         try:
             resp = requests.post(base_url, json=payload, timeout=5)
             print(f"Status: {resp.status_code}")
@@ -341,7 +344,9 @@ if __name__ == "__main__":
                 print(f"⚠ HTTP MCP test skipped: status {resp.status_code}")
                 return
             data = resp.json()
+            assert data.get("jsonrpc") == "2.0", "Should have jsonrpc: 2.0"
             assert "result" in data, "Response should have result"
+            assert data["result"]["method"] == "test", "Should echo method"
             print("✓ HTTP MCP endpoint test passed")
         except (requests.exceptions.RequestException, AssertionError) as e:
             print(f"⚠ HTTP MCP test skipped: {e}")
