@@ -43,6 +43,11 @@ echo_functions/
   - Accepts A2A Protocol messages
   - Returns messages with data echoed back
 
+- `@app.route(".well-known/agent-card.json", methods=["GET"])` - A2A Agent Card endpoint
+  - Serves the agent card for A2A Protocol discovery
+  - Returns A2A-compliant metadata (name, endpoint, capabilities, skills)
+  - Implements A2A Protocol v1.0.0 specification
+
 **jsonrpc_handler.py**
 - `JsonRpcHandler.handle_request(req_body)` - Protocol parser and handler
   - Detects JSON-RPC version (1.0 or 2.0)
@@ -63,6 +68,12 @@ echo_functions/
 - Local unit tests (handler logic)
 - Live HTTP integration tests
 - Graceful fallback if endpoints not deployed
+
+**test_production.py**
+- Production endpoint tests for https://echo.azurewebsites.net/api/
+- Comprehensive validation of all deployed endpoints
+- Tests: Echo, JSON-RPC, MCP, A2A, and Agent Card
+- Exit code indicates pass/fail for CI/CD integration
 
 ## How to Test
 
@@ -180,11 +191,46 @@ curl -X POST "https://echo.azurewebsites.net/api/a2a" \
   -d '{"data":{"message":"hello from A2A client"},"metadata":{"source":"test"}}'
 ```
 
+**Test Agent Card (A2A Discovery)**
+```bash
+curl "https://echo.azurewebsites.net/api/.well-known/agent-card.json"
+```
+
 ### Deployment
 
 Deploy to Azure Functions using the Azure CLI or Azure Functions extension:
 ```bash
 func azure functionapp publish <app-name>
+```
+
+### Production Testing
+
+Once deployed, run the production test suite to verify all endpoints are operational:
+
+```bash
+python test_production.py
+```
+
+This will:
+- Test all 5 deployed endpoints (Echo, JSON-RPC, MCP, A2A, Agent Card)
+- Verify response status codes (200)
+- Validate JSON structures and required fields
+- Check agent card compliance with A2A Protocol v1.0.0
+- Exit with code 0 if all tests pass, 1 if any fail (useful for CI/CD)
+
+Example output:
+```
+============================================================
+Production Endpoint Status Summary
+============================================================
+  ✓ Echo            PASS
+  ✓ JSON-RPC        PASS
+  ✓ MCP             PASS
+  ✓ A2A             PASS
+  ✓ Agent Card      PASS
+============================================================
+✓ All production endpoints are operational!
+============================================================
 ```
 
 ## Features

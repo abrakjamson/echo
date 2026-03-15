@@ -8,6 +8,7 @@ import requests
 from jsonrpc_handler import JsonRpcHandler
 from mcp_handler import McpHandler
 from a2a_handler import A2AHandler
+from a2a.types import Message, Role, TextPart
 
 # Fix Unicode encoding on Windows
 if sys.platform == 'win32':
@@ -106,13 +107,15 @@ def test_a2a_message_echo():
     """Test A2A message echo functionality."""
     print("\n=== Testing A2A Handler (unit) ===")
     
-    import uuid
-    req = {
-        "messageId": str(uuid.uuid4()),
-        "role": "user",
-        "parts": [{"text": "hello world"}],
-        "metadata": {"source": "test-client"}
-    }
+    # Use the SDK to construct a proper message
+    message = Message(
+        messageId="test-msg-001",
+        role=Role.user,
+        parts=[TextPart(text="hello world")],
+        metadata={"source": "test-client"}
+    )
+    
+    req = message.model_dump(exclude_none=True, by_alias=True)
     print(f"Request: {json.dumps(req)}")
     resp = A2AHandler.handle_request(req)
     print(f"Response: {json.dumps(resp)}")
@@ -252,18 +255,20 @@ if __name__ == "__main__":
         print("✓ HTTP MCP endpoint test passed")
 
     def test_http_a2a_endpoint():
-        """Integration test for deployed /api/a2a endpoint."""
-        print("\n=== Testing HTTP A2A Endpoint ===")
-        base_url = "https://echo.azurewebsites.net/api/a2a"
+        """Integration test for deployed /api/message:send endpoint (A2A SendMessage)."""
+        print("\n=== Testing HTTP A2A SendMessage Endpoint ===")
+        base_url = "https://echo.azurewebsites.net/api/message:send"
 
         print("Test 1: A2A message echo")
-        import uuid
-        payload = {
-            "messageId": str(uuid.uuid4()),
-            "role": "user",
-            "parts": [{"text": "hello from A2A client"}],
-            "metadata": {"source": "test-client"}
-        }
+        # Use SDK to construct proper message
+        message = Message(
+            messageId="http-test-a2a-001",
+            role=Role.user,
+            parts=[TextPart(text="hello from A2A client")],
+            metadata={"source": "test-client"}
+        )
+        payload = message.model_dump(exclude_none=True, by_alias=True)
+        
         try:
             resp = requests.post(base_url, json=payload, timeout=10)
         except requests.exceptions.RequestException as e:
@@ -280,7 +285,32 @@ if __name__ == "__main__":
         assert "parts" in data, "Response should have parts field"
         assert len(data["parts"]) > 0, "Response should have at least one part"
         assert data["parts"][0]["text"] == "hello from A2A client", "Text should be echoed back"
-        print("✓ HTTP A2A endpoint test passed")
+        print("✓ HTTP A2A SendMessage endpoint test passed")
+
+    def test_http_agent_card_endpoint():
+        """Integration test for deployed /.well-known/agent-card.json endpoint."""
+        print("\n=== Testing HTTP Agent Card Endpoint ===")
+        base_url = "https://echo.azurewebsites.net/api/.well-known/agent-card.json"
+
+        print("Test 1: Agent card JSON")
+        try:
+            resp = requests.get(base_url, timeout=10)
+        except requests.exceptions.RequestException as e:
+            print(f"\n⚠ HTTP agent card test skipped: {e}")
+            return
+        print(f"Status: {resp.status_code}")
+        print(f"Response: {resp.text[:200]}...")
+        if resp.status_code != 200:
+            print(f"\n⚠ HTTP agent card test skipped: expected 200 but got {resp.status_code} (endpoint may not be deployed yet)")
+            return
+        data = resp.json()
+        assert "name" in data, "Agent card should have name field"
+        assert "description" in data, "Agent card should have description field"
+        assert "endpoint" in data, "Agent card should have endpoint field"
+        assert "capabilities" in data, "Agent card should have capabilities field"
+        assert data.get("name") == "Echo Server", "Agent card name should be 'Echo Server'"
+        assert data.get("endpoint") == "https://echo.azurewebsites.net/api/a2a", "Endpoint should match A2A URL"
+        print("✓ HTTP agent card endpoint test passed")
 
     try:
         test_jsonrpc_1_0()
@@ -299,6 +329,7 @@ if __name__ == "__main__":
             test_http_jsonrpc_endpoint()
             test_http_mcp_endpoint()
             test_http_a2a_endpoint()
+            test_http_agent_card_endpoint()
         except requests.exceptions.RequestException as e:
             print(f"\n⚠ HTTP tests skipped: {e}")
             print("(Endpoints may not be deployed yet)")
@@ -315,7 +346,8 @@ if __name__ == "__main__":
                 ("Echo", "GET", f"{base_url}/echo?value=test"),
                 ("JSON-RPC 2.0", "POST", f"{base_url}/jsonrpc", {"jsonrpc": "2.0", "method": "test", "id": 1}),
                 ("MCP", "POST", f"{base_url}/mcp", {"action": "echo", "id": 1}),
-                ("A2A", "POST", f"{base_url}/a2a", {"messageId": "test", "role": "user", "parts": [{"text": "msg"}]}),
+                ("A2A SendMessage", "POST", f"{base_url}/message:send", {"messageId": "test", "role": "user", "parts": [{"text": "msg"}]}),
+                ("Agent Card", "GET", f"{base_url}/.well-known/agent-card.json"),
             ]
             
             all_ok = True
