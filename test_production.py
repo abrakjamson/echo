@@ -84,6 +84,41 @@ def test_mcp_endpoint():
         print(f"✗ MCP endpoint test failed: {e}")
         return False
 
+def test_mcp_sse_endpoint():
+    """Test the MCP SSE endpoint."""
+    print("\n=== Testing MCP SSE Endpoint ===")
+    url = f"{BASE_URL}/mcp/sse"
+    
+    try:
+        payload = {
+            "jsonrpc": "2.0",
+            "method": "sse_echo",
+            "params": {"data": "sse_test"},
+            "id": "sse-42"
+        }
+        resp = requests.post(url, json=payload, timeout=10)
+        print(f"Status: {resp.status_code}")
+        print(f"Response: {resp.text[:200]}")
+        
+        assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
+        assert "text/event-stream" in resp.headers.get("Content-Type", ""), "Expected SSE content type"
+        
+        # Verify SSE format
+        lines = resp.text.strip().split("\n")
+        assert lines[0] == "event: message", f"Expected event: message, got {lines[0]}"
+        assert lines[1].startswith("data: "), f"Expected data: line, got {lines[1]}"
+        
+        # Verify JSON content
+        data_json = json.loads(lines[1][6:])
+        assert data_json.get("jsonrpc") == "2.0", "Expected JSON-RPC 2.0"
+        assert data_json["result"]["method"] == "sse_echo", "Method should match"
+        
+        print("✓ MCP SSE endpoint test passed")
+        return True
+    except Exception as e:
+        print(f"✗ MCP SSE endpoint test failed: {e}")
+        return False
+
 def test_a2a_endpoint():
     """Test the A2A SendMessage endpoint (POST /a2a/message:send)."""
     print("\n=== Testing A2A SendMessage Endpoint ===")
@@ -287,6 +322,7 @@ def run_all_tests():
         "Echo": test_echo_endpoint(),
         "JSON-RPC": test_jsonrpc_endpoint(),
         "MCP": test_mcp_endpoint(),
+        "MCP SSE": test_mcp_sse_endpoint(),
         "A2A SendMessage": test_a2a_endpoint(),
         "A2A GetTask": test_a2a_get_task_endpoint(),
         "A2A ListTasks": test_a2a_list_tasks_endpoint(),

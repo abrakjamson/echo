@@ -108,6 +108,34 @@ def mcp(req: func.HttpRequest) -> func.HttpResponse:
     )
 
 
+@app.route(route="mcp/sse", methods=["POST"])
+def mcp_sse(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('MCP SSE handler processed a request.')
+
+    try:
+        req_body = req.get_json()
+    except ValueError:
+        return func.HttpResponse(
+            "The request body must be valid JSON.",
+            status_code=400
+        )
+
+    response = McpHandler.handle_request(req_body)
+
+    # Handle JSON-RPC notifications
+    if response is None:
+        return func.HttpResponse(status_code=202)
+
+    # Format as MCP SSE message event
+    sse_data = f"event: message\ndata: {json.dumps(response)}\n\n"
+
+    return func.HttpResponse(
+        body=sse_data,
+        status_code=200,
+        mimetype="text/event-stream"
+    )
+
+
 @app.route(route="a2a/message:send", methods=["POST"])
 def send_message(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('A2A SendMessage handler processed a request.')

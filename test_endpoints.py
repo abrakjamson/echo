@@ -351,6 +351,33 @@ if __name__ == "__main__":
         except (requests.exceptions.RequestException, AssertionError) as e:
             print(f"⚠ HTTP MCP test skipped: {e}")
 
+    def test_http_mcp_sse_endpoint():
+        """Integration test for deployed /api/mcp/sse endpoint."""
+        print("\n=== Testing HTTP MCP SSE Endpoint ===")
+        base_url = "https://echo.azurewebsites.net/api/mcp/sse"
+
+        payload = {"jsonrpc": "2.0", "method": "sse_test", "params": {"val": 123}, "id": "sse-1"}
+        try:
+            resp = requests.post(base_url, json=payload, timeout=5)
+            print(f"Status: {resp.status_code}")
+            if resp.status_code != 200:
+                print(f"⚠ HTTP MCP SSE test skipped: status {resp.status_code}")
+                return
+            
+            assert "text/event-stream" in resp.headers.get("Content-Type", ""), "Should have SSE content type"
+            
+            # Parse SSE format: event: message\ndata: {...}\n\n
+            lines = resp.text.strip().split("\n")
+            assert lines[0] == "event: message", f"Expected event: message, got {lines[0]}"
+            assert lines[1].startswith("data: "), f"Expected data: line, got {lines[1]}"
+            
+            data_json = json.loads(lines[1][6:])
+            assert data_json.get("jsonrpc") == "2.0", "Inner JSON should be JSON-RPC 2.0"
+            assert data_json["result"]["method"] == "sse_test", "Should echo method in SSE"
+            print("✓ HTTP MCP SSE endpoint test passed")
+        except (requests.exceptions.RequestException, AssertionError, json.JSONDecodeError) as e:
+            print(f"⚠ HTTP MCP SSE test skipped: {e}")
+
     def test_http_a2a_endpoint():
         """Integration test for deployed /api/a2a/message:send endpoint (A2A SendMessage)."""
         print("\n=== Testing HTTP A2A SendMessage Endpoint ===")
@@ -502,6 +529,7 @@ if __name__ == "__main__":
             test_http_echo_endpoint()
             test_http_jsonrpc_endpoint()
             test_http_mcp_endpoint()
+            test_http_mcp_sse_endpoint()
             test_http_a2a_endpoint()
             test_http_a2a_jsonrpc_endpoint()
             test_http_a2a_get_task_endpoint()
@@ -523,7 +551,8 @@ if __name__ == "__main__":
             endpoints = [
                 ("Echo", "GET", f"{base_url}/echo?value=test"),
                 ("JSON-RPC 2.0", "POST", f"{base_url}/jsonrpc", {"jsonrpc": "2.0", "method": "test", "id": 1}),
-                ("MCP", "POST", f"{base_url}/mcp", {"action": "echo", "id": 1}),
+                ("MCP", "POST", f"{base_url}/mcp", {"jsonrpc": "2.0", "method": "echo", "id": 1}),
+                ("MCP SSE", "POST", f"{base_url}/mcp/sse", {"jsonrpc": "2.0", "method": "echo", "id": 1}),
                 ("A2A SendMessage", "POST", f"{base_url}/a2a/message:send", {"messageId": "test", "role": "user", "parts": [{"text": "msg"}]}),
                 ("A2A JSON-RPC", "POST", f"{base_url}/a2a", {"jsonrpc": "2.0", "method": "a2a.GetTask", "params": {"id": "test"}, "id": 1}),
                 ("Agent Card", "GET", f"{base_url}/.well-known/agent-card.json"),

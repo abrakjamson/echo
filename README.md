@@ -153,6 +153,35 @@ Invoke-WebRequest -Uri "https://echo.azurewebsites.net/api/mcp" `
   -Body $body
 ```
 
+#### MCP SSE Endpoint (`/mcp/sse`)
+
+A Server-Sent Events (SSE) stream endpoint that emits MCP-compliant JSON-RPC messages as SSE events. The server responds with an `event: message` stream containing the JSON-RPC response payload.
+
+**Request Method**: POST
+
+#### curl Example
+
+```bash
+curl -X POST "https://echo.azurewebsites.net/api/mcp/sse" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"echo","params":{"key":"value"},"id":1}'
+```
+
+#### PowerShell Example
+
+```powershell
+$body = @{
+    jsonrpc = "2.0"
+    method = "echo"
+    params = @{ key = "value" }
+    id = 1
+} | ConvertTo-Json
+Invoke-WebRequest -Uri "https://echo.azurewebsites.net/api/mcp/sse" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body $body
+```
+
 ---
 
 ### 4. Agent2Agent (A2A) JSON-RPC Endpoint (`/a2a`)
