@@ -6,7 +6,7 @@ from a2a.types import Message, TextPart, Role
 
 
 class A2AHandler:
-    """Handler for A2A Protocol messages."""
+    """Handler for A2A Protocol messages and operations."""
     
     @staticmethod
     def handle_request(req_body):
@@ -70,3 +70,73 @@ class A2AHandler:
                     "message": f"Error creating response: {str(e)}"
                 }
             }
+    
+    @staticmethod
+    def get_task(task_id):
+        """
+        Get task state (HTTP/REST binding for a2a.GetTask).
+        
+        Args:
+            task_id: Task ID to retrieve
+            
+        Returns:
+            Dictionary with task information
+        """
+        if not task_id:
+            return {
+                "error": {
+                    "code": "invalid_request",
+                    "message": "Task ID is required"
+                }
+            }
+        
+        # For echo server: return a stub task
+        return {
+            "id": task_id,
+            "status": "completed",
+            "createdAt": "2024-01-01T00:00:00Z",
+            "updatedAt": "2024-01-01T00:00:00Z"
+        }
+    
+    @staticmethod
+    def list_tasks():
+        """
+        List tasks (HTTP/REST binding for a2a.ListTasks).
+        
+        Returns:
+            Dictionary with list of tasks
+        """
+        # For echo server: return empty list
+        return {
+            "tasks": [],
+            "nextPageToken": "",
+            "pageSize": 0,
+            "totalSize": 0
+        }
+    
+    @staticmethod
+    def cancel_task(task_id):
+        """
+        Cancel a task (HTTP/REST binding for a2a.CancelTask).
+        
+        Args:
+            task_id: Task ID to cancel
+            
+        Returns:
+            Dictionary with updated task information
+        """
+        if not task_id:
+            return {
+                "error": {
+                    "code": "invalid_request",
+                    "message": "Task ID is required"
+                }
+            }
+        
+        # For echo server: return stub response
+        return {
+            "id": task_id,
+            "status": "canceled",
+            "createdAt": "2024-01-01T00:00:00Z",
+            "updatedAt": "2024-01-01T00:00:00Z"
+        }

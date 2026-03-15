@@ -4,16 +4,17 @@ import logging
 from jsonrpc_handler import JsonRpcHandler
 from mcp_handler import McpHandler
 from a2a_handler import A2AHandler
+from a2a_jsonrpc_handler import A2AJsonRpcHandler
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
 # Agent Card for A2A Protocol Discovery
 AGENT_CARD = {
     "name": "Echo Server",
-    "description": "A lightweight echo server supporting multiple protocols: HTTP echo, JSON-RPC 1.0/2.0, MCP, and Agent2Agent (A2A)",
+    "description": "A lightweight echo server supporting multiple protocols: HTTP echo, JSON-RPC 1.0/2.0, MCP, and Agent2Agent (A2A) via both HTTP/REST and JSON-RPC bindings",
     "version": "1.0.0",
     "agentId": "echo-server",
-    "endpoint": "https://echo.azurewebsites.net/api/message:send",
+    "endpoint": "https://echo.azurewebsites.net/api/a2a/message:send",
     "protocolVersion": "1.0.0",
     "capabilities": {
         "streaming": False,
@@ -103,7 +104,7 @@ def mcp(req: func.HttpRequest) -> func.HttpResponse:
     )
 
 
-@app.route(route="message:send", methods=["POST"])
+@app.route(route="a2a/message:send", methods=["POST"])
 def send_message(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('A2A SendMessage handler processed a request.')
 
@@ -123,6 +124,105 @@ def send_message(req: func.HttpRequest) -> func.HttpResponse:
         )
 
     response = A2AHandler.handle_request(req_body)
+
+    return func.HttpResponse(
+        body=json.dumps(response),
+        status_code=200,
+        mimetype="application/json"
+    )
+
+
+@app.route(route="a2a/tasks/{task_id}", methods=["GET"])
+def get_task(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('A2A GetTask handler processed a request.')
+    
+    task_id = req.route_params.get('task_id')
+    
+    if not task_id:
+        error_response = {
+            "error": {
+                "code": "invalid_request",
+                "message": "Task ID is required"
+            }
+        }
+        return func.HttpResponse(
+            json.dumps(error_response),
+            status_code=400,
+            mimetype="application/json"
+        )
+    
+    response = A2AHandler.get_task(task_id)
+    
+    return func.HttpResponse(
+        body=json.dumps(response),
+        status_code=200,
+        mimetype="application/json"
+    )
+
+
+@app.route(route="a2a/tasks", methods=["GET"])
+def list_tasks(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('A2A ListTasks handler processed a request.')
+    
+    response = A2AHandler.list_tasks()
+    
+    return func.HttpResponse(
+        body=json.dumps(response),
+        status_code=200,
+        mimetype="application/json"
+    )
+
+
+@app.route(route="a2a/tasks/{task_id}:cancel", methods=["POST"])
+def cancel_task(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('A2A CancelTask handler processed a request.')
+    
+    task_id = req.route_params.get('task_id')
+    
+    if not task_id:
+        error_response = {
+            "error": {
+                "code": "invalid_request",
+                "message": "Task ID is required"
+            }
+        }
+        return func.HttpResponse(
+            json.dumps(error_response),
+            status_code=400,
+            mimetype="application/json"
+        )
+    
+    response = A2AHandler.cancel_task(task_id)
+    
+    return func.HttpResponse(
+        body=json.dumps(response),
+        status_code=200,
+        mimetype="application/json"
+    )
+
+
+
+@app.route(route="a2a", methods=["POST"])
+def a2a_jsonrpc(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('A2A JSON-RPC handler processed a request.')
+
+    try:
+        req_body = req.get_json()
+    except ValueError:
+        error_response = {
+            "jsonrpc": "2.0",
+            "error": {
+                "code": -32700,
+                "message": "Parse error"
+            }
+        }
+        return func.HttpResponse(
+            json.dumps(error_response),
+            status_code=400,
+            mimetype="application/json"
+        )
+
+    response = A2AJsonRpcHandler.handle_request(req_body)
 
     return func.HttpResponse(
         body=json.dumps(response),

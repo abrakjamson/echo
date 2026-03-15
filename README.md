@@ -152,7 +152,89 @@ Invoke-WebRequest -Uri "https://echo.azurewebsites.net/api/mcp" `
 
 ---
 
-### 4. Agent2Agent (A2A) SendMessage Endpoint (`/message:send`)
+### 4. Agent2Agent (A2A) JSON-RPC Endpoint (`/a2a`)
+
+Agent2Agent Protocol v1.0.0 JSON-RPC 2.0 binding. Implements A2A operations using JSON-RPC 2.0 as the transport mechanism.
+
+**Request Method**: POST
+
+**Spec**: [A2A Protocol v1.0.0](https://a2a-protocol.org/)
+
+**Supported Methods**:
+- `a2a.SendMessage`: Send a message to the agent and get a response
+- `a2a.GetTask`: Retrieve task state (stub for echo server)
+- `a2a.ListTasks`: List all tasks (stub for echo server, returns empty)
+- `a2a.CancelTask`: Cancel a task (stub for echo server)
+
+#### JSON-RPC Method: a2a.SendMessage
+
+Sends an A2A Message object via JSON-RPC 2.0 and receives an echoed response.
+
+**Request Format**:
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "a2a.SendMessage",
+  "params": {
+    "message": {
+      "messageId": "msg-001",
+      "role": "user",
+      "parts": [{"text": "Hello, agent!"}],
+      "metadata": {"source": "client"}
+    }
+  },
+  "id": 1
+}
+```
+
+#### curl Example
+
+```bash
+curl -X POST "https://echo.azurewebsites.net/api/a2a" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "a2a.SendMessage",
+    "params": {
+      "message": {
+        "messageId": "msg-001",
+        "role": "user",
+        "parts": [{"text": "Hello, agent!"}],
+        "metadata": {"source": "client"}
+      }
+    },
+    "id": 1
+  }'
+```
+
+#### PowerShell Example
+
+```powershell
+$message = @{
+    messageId = "msg-001"
+    role = "user"
+    parts = @(
+        @{ text = "Hello, agent!" }
+    )
+    metadata = @{ source = "client" }
+}
+
+$body = @{
+    jsonrpc = "2.0"
+    method = "a2a.SendMessage"
+    params = @{ message = $message }
+    id = 1
+} | ConvertTo-Json -Depth 10
+
+Invoke-WebRequest -Uri "https://echo.azurewebsites.net/api/a2a" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body $body
+```
+
+---
+
+### 5. Agent2Agent (A2A) SendMessage Endpoint (`/message:send`)
 
 Agent2Agent Protocol v1.0.0 HTTP/REST binding. Accepts A2A Message objects and echoes back the message content in a new agent-role Message response.
 

@@ -83,9 +83,9 @@ def test_mcp_endpoint():
         return False
 
 def test_a2a_endpoint():
-    """Test the A2A SendMessage endpoint (POST /message:send)."""
+    """Test the A2A SendMessage endpoint (POST /a2a/message:send)."""
     print("\n=== Testing A2A SendMessage Endpoint ===")
-    url = f"{BASE_URL}/message:send"
+    url = f"{BASE_URL}/a2a/message:send"
 
     try:
         # Use SDK to construct proper message
@@ -111,6 +111,120 @@ def test_a2a_endpoint():
         return True
     except Exception as e:
         print(f"✗ A2A SendMessage endpoint test failed: {e}")
+        return False
+
+def test_a2a_get_task_endpoint():
+    """Test the A2A GetTask endpoint (GET /a2a/tasks/{id})."""
+    print("\n=== Testing A2A GetTask Endpoint ===")
+    url = f"{BASE_URL}/a2a/tasks/prod-test-task-001"
+    
+    try:
+        resp = requests.get(url, timeout=10)
+        print(f"Status: {resp.status_code}")
+        print(f"Response: {resp.text[:200]}")
+        
+        assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
+        data = resp.json()
+        assert "id" in data, "Response should have id field"
+        assert data["id"] == "prod-test-task-001", "Task id should match request"
+        assert "status" in data, "Response should have status field"
+        print("✓ A2A GetTask endpoint test passed")
+        return True
+    except Exception as e:
+        print(f"✗ A2A GetTask endpoint test failed: {e}")
+        return False
+
+def test_a2a_list_tasks_endpoint():
+    """Test the A2A ListTasks endpoint (GET /a2a/tasks)."""
+    print("\n=== Testing A2A ListTasks Endpoint ===")
+    url = f"{BASE_URL}/a2a/tasks"
+    
+    try:
+        resp = requests.get(url, timeout=10)
+        print(f"Status: {resp.status_code}")
+        print(f"Response: {resp.text[:200]}")
+        
+        assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
+        data = resp.json()
+        assert "tasks" in data, "Response should have tasks field"
+        assert isinstance(data["tasks"], list), "Tasks should be a list"
+        assert "nextPageToken" in data, "Response should have nextPageToken field"
+        assert "pageSize" in data, "Response should have pageSize field"
+        assert "totalSize" in data, "Response should have totalSize field"
+        print("✓ A2A ListTasks endpoint test passed")
+        return True
+    except Exception as e:
+        print(f"✗ A2A ListTasks endpoint test failed: {e}")
+        return False
+
+def test_a2a_cancel_task_endpoint():
+    """Test the A2A CancelTask endpoint (POST /a2a/tasks/{id}:cancel)."""
+    print("\n=== Testing A2A CancelTask Endpoint ===")
+    url = f"{BASE_URL}/a2a/tasks/prod-test-task-cancel-001:cancel"
+    
+    try:
+        resp = requests.post(url, timeout=10)
+        print(f"Status: {resp.status_code}")
+        print(f"Response: {resp.text[:200]}")
+        
+        assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
+        data = resp.json()
+        assert "id" in data, "Response should have id field"
+        assert data["id"] == "prod-test-task-cancel-001", "Task id should match request"
+        assert data["status"] == "canceled", "Task status should be canceled"
+        print("✓ A2A CancelTask endpoint test passed")
+        return True
+    except Exception as e:
+        print(f"✗ A2A CancelTask endpoint test failed: {e}")
+        return False
+
+def test_a2a_jsonrpc_endpoint():
+    """Test the A2A JSON-RPC endpoint (POST /a2a)."""
+    print("\n=== Testing A2A JSON-RPC Endpoint ===")
+    url = f"{BASE_URL}/a2a"
+
+    try:
+        # Use SDK to construct proper message
+        message = Message(
+            messageId="prod-test-a2a-jsonrpc-001",
+            role=Role.user,
+            parts=[TextPart(text="production test via JSON-RPC")],
+            metadata={"source": "production-test"}
+        )
+        
+        # Create JSON-RPC 2.0 request
+        payload = {
+            "jsonrpc": "2.0",
+            "method": "a2a.SendMessage",
+            "params": {
+                "message": message.model_dump(exclude_none=True, by_alias=True)
+            },
+            "id": 1
+        }
+        
+        resp = requests.post(url, json=payload, timeout=10)
+        print(f"Status: {resp.status_code}")
+        print(f"Response: {resp.text[:300]}...")
+        
+        assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
+        data = resp.json()
+        
+        # Verify JSON-RPC 2.0 structure
+        assert data.get("jsonrpc") == "2.0", "Response should have jsonrpc: 2.0"
+        assert "result" in data, "Response should have result field"
+        assert data["id"] == 1, "Response should include id"
+        
+        # Verify result structure
+        assert "message" in data["result"], "Result should have message field"
+        result_msg = data["result"]["message"]
+        assert result_msg.get("role") == "agent", "Response should have role: agent"
+        assert "parts" in result_msg, "Response should have parts field"
+        assert result_msg["parts"][0]["text"] == "production test via JSON-RPC", "Text should be echoed back"
+        
+        print("✓ A2A JSON-RPC endpoint test passed")
+        return True
+    except Exception as e:
+        print(f"✗ A2A JSON-RPC endpoint test failed: {e}")
         return False
 
 def test_agent_card_endpoint():
@@ -139,7 +253,7 @@ def test_agent_card_endpoint():
         assert data["name"] == "Echo Server", f"Name should be 'Echo Server', got '{data['name']}'"
         assert data["version"] == "1.0.0", f"Version should be '1.0.0', got '{data['version']}'"
         assert data["agentId"] == "echo-server", f"Agent ID should be 'echo-server', got '{data['agentId']}'"
-        assert data["endpoint"] == "https://echo.azurewebsites.net/api/message:send", f"Endpoint mismatch"
+        assert data["endpoint"] == "https://echo.azurewebsites.net/api/a2a/message:send", f"Endpoint mismatch"
         assert data["protocolVersion"] == "1.0.0", f"Protocol version should be '1.0.0'"
         
         # Verify capabilities
@@ -172,6 +286,10 @@ def run_all_tests():
         "JSON-RPC": test_jsonrpc_endpoint(),
         "MCP": test_mcp_endpoint(),
         "A2A SendMessage": test_a2a_endpoint(),
+        "A2A GetTask": test_a2a_get_task_endpoint(),
+        "A2A ListTasks": test_a2a_list_tasks_endpoint(),
+        "A2A CancelTask": test_a2a_cancel_task_endpoint(),
+        "A2A JSON-RPC": test_a2a_jsonrpc_endpoint(),
         "Agent Card": test_agent_card_endpoint(),
     }
     
@@ -182,7 +300,7 @@ def run_all_tests():
     all_passed = True
     for endpoint, passed in results.items():
         status = "✓" if passed else "✗"
-        print(f"  {status} {endpoint:15} {'PASS' if passed else 'FAIL'}")
+        print(f"  {status} {endpoint:20} {'PASS' if passed else 'FAIL'}")
         if not passed:
             all_passed = False
     
