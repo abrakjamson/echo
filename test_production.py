@@ -31,6 +31,34 @@ def test_echo_endpoint():
         print(f"✗ Echo endpoint test failed: {e}")
         return False
 
+def test_soap_endpoint():
+    """Test the SOAP endpoint."""
+    print("\n=== Testing SOAP Endpoint ===")
+    url = f"{BASE_URL}/soap"
+    
+    try:
+        req = """<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:echo="http://example.com/echo">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <echo:EchoRequest>
+         <echo:Message>production_soap_test</echo:Message>
+      </echo:EchoRequest>
+   </soapenv:Body>
+</soapenv:Envelope>"""
+        resp = requests.post(url, data=req, headers={"Content-Type": "text/xml"}, timeout=10)
+        print(f"Status: {resp.status_code}")
+        print(f"Response: {resp.text[:300]}...")
+        
+        assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
+        assert "EchoResponse" in resp.text, "Response should have EchoResponse tag"
+        assert "production_soap_test" in resp.text, "Response should echo the message"
+        print("✓ SOAP endpoint test passed")
+        return True
+    except Exception as e:
+        print(f"✗ SOAP endpoint test failed: {e}")
+        return False
+
 def test_jsonrpc_endpoint():
     """Test the JSON-RPC endpoint."""
     print("\n=== Testing JSON-RPC Endpoint ===")
@@ -320,6 +348,7 @@ def run_all_tests():
     
     results = {
         "Echo": test_echo_endpoint(),
+        "SOAP": test_soap_endpoint(),
         "JSON-RPC": test_jsonrpc_endpoint(),
         "MCP": test_mcp_endpoint(),
         "MCP SSE": test_mcp_sse_endpoint(),

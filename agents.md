@@ -1,6 +1,6 @@
-# Echo Server with JSON-RPC, MCP, and Agent2Agent Support
+# Echo Server with JSON-RPC, MCP, SOAP, and Agent2Agent Support
 
-A lightweight Azure Functions application that provides HTTP echo, JSON-RPC, MCP (Model Context Protocol), and Agent2Agent (A2A) protocol endpoints.
+A lightweight Azure Functions application that provides HTTP echo, JSON-RPC, MCP (Model Context Protocol), SOAP, and Agent2Agent (A2A) protocol endpoints.
 
 ## Public URL
 
@@ -13,6 +13,7 @@ https://echo.azurewebsites.net/api/
 ```
 echo_functions/
 ├── function_app.py          # Azure Functions app with all protocol routes
+├── soap_handler.py          # SOAP protocol echo handler
 ├── jsonrpc_handler.py       # JSON-RPC 1.0 and 2.0 protocol handler
 ├── mcp_handler.py           # MCP (Model Context Protocol) handler
 ├── a2a_handler.py           # A2A HTTP/REST protocol handler
@@ -28,12 +29,19 @@ echo_functions/
 
 **function_app.py**
 - `@app.route("echo")` - HTTP echo endpoint (GET/POST)
+- `@app.route("soap")` - SOAP echo endpoint (POST)
 - `@app.route("jsonrpc")` - Standard JSON-RPC 1.0/2.0 endpoint
 - `@app.route("mcp")` - MCP (Model Context Protocol) endpoint
 - `@app.route("a2a/message:send")` - A2A SendMessage (HTTP/REST)
 - `@app.route("a2a/tasks/...")` - A2A Task operations (Get, List, Cancel)
 - `@app.route("a2a")` - A2A Protocol JSON-RPC 2.0 binding
 - `@app.route(".well-known/agent-card.json")` - A2A Agent Card discovery
+
+**soap_handler.py**
+- `SoapHandler.handle_request(req_body)` - SOAP echo logic
+  - Parses SOAP 1.1 Envelopes
+  - Echoes content back in a proper SOAP response
+  - Returns SOAP Faults on errors
 
 **a2a_handler.py**
 - `A2AHandler.handle_request(req_body)` - A2A REST logic
@@ -137,6 +145,7 @@ python test_production.py
 
 ✅ **Multi-Protocol Support**
 - Standard HTTP Echo
+- SOAP 1.1 Echo
 - JSON-RPC 1.0 & 2.0
 - Model Context Protocol (MCP)
 - Agent2Agent (A2A) v1.0.0

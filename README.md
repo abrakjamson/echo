@@ -1,6 +1,6 @@
 # Echo Server
 
-A lightweight, publicly available Azure Functions application for testing protocol implementations. The server echoes back requests using multiple protocol bindings: HTTP/REST, JSON-RPC, MCP (Model Context Protocol), and Agent2Agent (A2A).
+A lightweight, publicly available Azure Functions application for testing protocol implementations. The server echoes back requests using multiple protocol bindings: HTTP/REST, SOAP, JSON-RPC, MCP (Model Context Protocol), and Agent2Agent (A2A).
 
 ## Purpose
 
@@ -16,12 +16,13 @@ https://echo.azurewebsites.net/api/
 
 - [Endpoints](#endpoints)
   - [Echo](#1-echo-endpoint-echo)
-  - [JSON-RPC](#2-json-rpc-endpoint-jsonrpc)
-  - [MCP](#3-mcp-endpoint-mcp)
+  - [SOAP](#2-soap-endpoint-soap)
+  - [JSON-RPC](#3-json-rpc-endpoint-jsonrpc)
+  - [MCP](#4-mcp-endpoint-mcp)
   - [MCP SSE](#mcp-sse-endpoint-mcp-sse)
-  - [A2A JSON-RPC](#4-agent2agent-a2a-json-rpc-endpoint-a2a)
-  - [A2A HTTP/REST](#5-agent2agent-a2a-httprest-endpoints-a2a)
-  - [Agent Card](#6-agent-card-discovery-endpoint-well-knownagent-cardjson)
+  - [A2A JSON-RPC](#5-agent2agent-a2a-json-rpc-endpoint-a2a)
+  - [A2A HTTP/REST](#6-agent2agent-a2a-httprest-endpoints-a2a)
+  - [Agent Card](#7-agent-card-discovery-endpoint-well-knownagent-cardjson)
 - [Testing Locally](#testing-locally)
 - [Use Cases](#use-cases)
 - [License](#license)
@@ -66,7 +67,52 @@ Invoke-WebRequest -Uri "https://echo.azurewebsites.net/api/echo" `
 
 ---
 
-### 2. JSON-RPC Endpoint (`/jsonrpc`)
+### 2. SOAP Endpoint (`/soap`)
+
+SOAP 1.1 protocol echo handler. Parses a SOAP 1.1 Envelope and echoes back the content of the first element in the Body within a corresponding Response tag.
+
+**Request Method**: POST
+
+#### curl Example
+
+```bash
+curl -X POST "https://echo.azurewebsites.net/api/soap" \
+  -H "Content-Type: text/xml" \
+  -d '<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:echo="http://example.com/echo">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <echo:EchoRequest>
+         <echo:Message>Hello, SOAP!</echo:Message>
+      </echo:EchoRequest>
+   </soapenv:Body>
+</soapenv:Envelope>'
+```
+
+#### PowerShell Example
+
+```powershell
+$xml = @"
+<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:echo="http://example.com/echo">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <echo:EchoRequest>
+         <echo:Message>Hello, SOAP!</echo:Message>
+      </echo:EchoRequest>
+   </soapenv:Body>
+</soapenv:Envelope>
+"@
+
+Invoke-WebRequest -Uri "https://echo.azurewebsites.net/api/soap" `
+  -Method Post `
+  -ContentType "text/xml" `
+  -Body $xml
+```
+
+---
+
+### 3. JSON-RPC Endpoint (`/jsonrpc`)
 
 JSON-RPC 1.0 and 2.0 protocol handler. Echoes back the entire request in the response result field.
 
@@ -136,7 +182,7 @@ Invoke-WebRequest -Uri "https://echo.azurewebsites.net/api/jsonrpc" `
 
 ---
 
-### 3. MCP Endpoint (`/mcp`)
+### 4. MCP Endpoint (`/mcp`)
 
 Model Context Protocol (MCP) handler. Implements the MCP specification using JSON-RPC 2.0. Echoes back the `method` and `params` in the response `result` field.
 
@@ -198,7 +244,7 @@ Invoke-WebRequest -Uri "https://echo.azurewebsites.net/api/mcp/sse" `
 
 ---
 
-### 4. Agent2Agent (A2A) JSON-RPC Endpoint (`/a2a`)
+### 5. Agent2Agent (A2A) JSON-RPC Endpoint (`/a2a`)
 
 Agent2Agent Protocol v1.0.0 JSON-RPC 2.0 binding. Implements A2A operations using JSON-RPC 2.0 as the transport mechanism.
 
@@ -280,7 +326,7 @@ Invoke-WebRequest -Uri "https://echo.azurewebsites.net/api/a2a" `
 
 ---
 
-### 5. Agent2Agent (A2A) HTTP/REST Endpoints (`/a2a/...`)
+### 6. Agent2Agent (A2A) HTTP/REST Endpoints (`/a2a/...`)
 
 Agent2Agent Protocol v1.0.0 HTTP/REST binding. Provides a set of RESTful endpoints for message and task operations.
 
@@ -331,7 +377,7 @@ curl -X POST "https://echo.azurewebsites.net/api/a2a/tasks/task-123:cancel"
 
 ---
 
-### 6. Agent Card Discovery Endpoint (`/.well-known/agent-card.json`)
+### 7. Agent Card Discovery Endpoint (`/.well-known/agent-card.json`)
 
 A2A agent card for service discovery. Returns metadata about the echo server including the SendMessage endpoint.
 
@@ -348,6 +394,45 @@ curl "https://echo.azurewebsites.net/api/.well-known/agent-card.json"
 ```powershell
 Invoke-WebRequest -Uri "https://echo.azurewebsites.net/api/.well-known/agent-card.json"
 ```
+
+---
+
+## Testing Locally
+
+### Setup
+
+```bash
+cd echo_functions
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### Run Unit & Integration Tests
+
+```bash
+# Tests local handlers + deployed endpoints
+python test_endpoints.py
+```
+
+### Test Production Endpoints
+
+```bash
+# Tests only the deployed production endpoints
+python test_production.py
+```
+
+## Use Cases
+
+- **Protocol Testing**: Validate your JSON-RPC, MCP, or A2A client implementations
+- **Integration Testing**: Test client-server communication with a reliable echo service
+- **Documentation**: Use curl/PowerShell examples in your client documentation
+- **Debugging**: Verify request payloads are constructed correctly
+- **CI/CD**: Include endpoint tests in your pipeline
+
+## License
+
+This echo server is provided as a public testing utility.
 
 ---
 

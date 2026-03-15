@@ -5,6 +5,7 @@ from jsonrpc_handler import JsonRpcHandler
 from mcp_handler import McpHandler
 from a2a_handler import A2AHandler
 from a2a_jsonrpc_handler import A2AJsonRpcHandler
+from soap_handler import SoapHandler
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
@@ -260,6 +261,27 @@ def a2a_jsonrpc(req: func.HttpRequest) -> func.HttpResponse:
         body=json.dumps(response),
         status_code=200,
         mimetype="application/json"
+    )
+
+
+@app.route(route="soap", methods=["POST"])
+def soap(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('SOAP handler processed a request.')
+
+    try:
+        req_body = req.get_body().decode('utf-8')
+    except Exception as e:
+        return func.HttpResponse(
+            f"Error reading request body: {str(e)}",
+            status_code=400
+        )
+
+    response = SoapHandler.handle_request(req_body)
+
+    return func.HttpResponse(
+        body=response,
+        status_code=200,
+        mimetype="text/xml"
     )
 
 

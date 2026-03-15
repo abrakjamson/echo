@@ -7,6 +7,7 @@ import os
 import requests
 from jsonrpc_handler import JsonRpcHandler
 from mcp_handler import McpHandler
+from soap_handler import SoapHandler
 from a2a_handler import A2AHandler
 from a2a_jsonrpc_handler import A2AJsonRpcHandler
 from a2a.types import Message, Role, TextPart
@@ -314,7 +315,53 @@ def test_http_jsonrpc_endpoint():
     except (requests.exceptions.RequestException, AssertionError) as e:
         print(f"⚠ HTTP JSON-RPC test skipped: {e}")
 
+def test_http_soap_endpoint():
+    """Integration test for deployed /api/soap endpoint."""
+    print("\n=== Testing HTTP SOAP Endpoint ===")
+    base_url = "https://echo.azurewebsites.net/api/soap"
+    req = """<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:echo="http://example.com/echo">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <echo:EchoRequest>
+         <echo:Message>Hello, HTTP SOAP!</echo:Message>
+      </echo:EchoRequest>
+   </soapenv:Body>
+</soapenv:Envelope>"""
+    try:
+        resp = requests.post(base_url, data=req, headers={"Content-Type": "text/xml"}, timeout=5)
+        print(f"Status: {resp.status_code}")
+        if resp.status_code != 200:
+            print(f"⚠ HTTP SOAP test skipped: status {resp.status_code}")
+            return
+        assert "<echo:EchoResponse>" in resp.text, "Response should have EchoResponse tag"
+        assert "Hello, HTTP SOAP!" in resp.text, "Response should echo message"
+        print("✓ HTTP SOAP endpoint test passed")
+    except (requests.exceptions.RequestException, AssertionError) as e:
+        print(f"⚠ HTTP SOAP test skipped: {e}")
+
 if __name__ == "__main__":
+    def test_soap_handler_unit():
+        """Unit test for SoapHandler."""
+        print("\n=== Testing SOAP handler (unit) ===")
+        req = """<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:echo="http://example.com/echo">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <echo:EchoRequest>
+         <echo:Message>Hello, SOAP!</echo:Message>
+      </echo:EchoRequest>
+   </soapenv:Body>
+</soapenv:Envelope>"""
+        print(f"Request:\n{req}")
+        resp = SoapHandler.handle_request(req)
+        print(f"Response:\n{resp}")
+        
+        assert "EchoResponse" in resp, "Response should have EchoResponse tag"
+        assert "Hello, SOAP!" in resp, "Response should echo the message"
+        assert "Envelope" in resp, "Response should be a SOAP Envelope"
+        print("✓ SOAP handler unit test passed")
+
     def test_mcp_handler_unit():
         """Unit test for McpHandler."""
         print("\n=== Testing MCP handler (unit) ===")
@@ -512,6 +559,8 @@ if __name__ == "__main__":
         test_jsonrpc_2_0_notification()
         test_invalid_request()
         test_non_dict_request()
+        # SOAP unit test
+        test_soap_handler_unit()
         # MCP unit test
         test_mcp_handler_unit()
         # A2A unit tests
@@ -528,6 +577,7 @@ if __name__ == "__main__":
         try:
             test_http_echo_endpoint()
             test_http_jsonrpc_endpoint()
+            test_http_soap_endpoint()
             test_http_mcp_endpoint()
             test_http_mcp_sse_endpoint()
             test_http_a2a_endpoint()
@@ -555,6 +605,7 @@ if __name__ == "__main__":
                 ("MCP SSE", "POST", f"{base_url}/mcp/sse", {"jsonrpc": "2.0", "method": "echo", "id": 1}),
                 ("A2A SendMessage", "POST", f"{base_url}/a2a/message:send", {"messageId": "test", "role": "user", "parts": [{"text": "msg"}]}),
                 ("A2A JSON-RPC", "POST", f"{base_url}/a2a", {"jsonrpc": "2.0", "method": "a2a.GetTask", "params": {"id": "test"}, "id": 1}),
+                ("SOAP", "POST", f"{base_url}/soap", "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\"><soapenv:Body><EchoRequest><Message>test</Message></EchoRequest></soapenv:Body></soapenv:Envelope>"),
                 ("Agent Card", "GET", f"{base_url}/.well-known/agent-card.json"),
             ]
 
