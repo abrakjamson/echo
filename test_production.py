@@ -139,7 +139,7 @@ def test_agent_card_endpoint():
         assert data["name"] == "Echo Server", f"Name should be 'Echo Server', got '{data['name']}'"
         assert data["version"] == "1.0.0", f"Version should be '1.0.0', got '{data['version']}'"
         assert data["agentId"] == "echo-server", f"Agent ID should be 'echo-server', got '{data['agentId']}'"
-        assert data["endpoint"] == "https://echo.azurewebsites.net/api/a2a", f"Endpoint mismatch"
+        assert data["endpoint"] == "https://echo.azurewebsites.net/api/message:send", f"Endpoint mismatch"
         assert data["protocolVersion"] == "1.0.0", f"Protocol version should be '1.0.0'"
         
         # Verify capabilities
