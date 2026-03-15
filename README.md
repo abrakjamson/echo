@@ -234,24 +234,19 @@ Invoke-WebRequest -Uri "https://echo.azurewebsites.net/api/a2a" `
 
 ---
 
-### 5. Agent2Agent (A2A) SendMessage Endpoint (`/message:send`)
+### 5. Agent2Agent (A2A) HTTP/REST Endpoints (`/a2a/...`)
 
-Agent2Agent Protocol v1.0.0 HTTP/REST binding. Accepts A2A Message objects and echoes back the message content in a new agent-role Message response.
-
-**Request Method**: POST
+Agent2Agent Protocol v1.0.0 HTTP/REST binding. Provides a set of RESTful endpoints for message and task operations.
 
 **Spec**: [A2A Protocol v1.0.0](https://a2a-protocol.org/)
 
-**Message Fields**:
-- `messageId` (string): Unique identifier for the message
-- `role` (enum): `"user"` or `"agent"`
-- `parts` (array): Message content (TextPart, FilePart, etc.)
-- `metadata` (object, optional): Additional metadata
+#### POST `/a2a/message:send` (SendMessage)
 
-#### curl Example
+Accepts A2A Message objects and echoes back the message content in a new agent-role Message response.
 
+**curl Example**:
 ```bash
-curl -X POST "https://echo.azurewebsites.net/api/message:send" \
+curl -X POST "https://echo.azurewebsites.net/api/a2a/message:send" \
   -H "Content-Type: application/json" \
   -d '{
     "messageId": "msg-001",
@@ -261,26 +256,36 @@ curl -X POST "https://echo.azurewebsites.net/api/message:send" \
   }'
 ```
 
-#### PowerShell Example
+#### GET `/a2a/tasks/{id}` (GetTask)
 
-```powershell
-$body = @{
-    messageId = "msg-001"
-    role = "user"
-    parts = @(
-        @{ text = "Hello, agent!" }
-    )
-    metadata = @{ source = "client" }
-} | ConvertTo-Json -Depth 10
-Invoke-WebRequest -Uri "https://echo.azurewebsites.net/api/message:send" `
-  -Method Post `
-  -ContentType "application/json" `
-  -Body $body
+Retrieves the status of a specific task. Returns a completed stub for testing.
+
+**curl Example**:
+```bash
+curl "https://echo.azurewebsites.net/api/a2a/tasks/task-123"
+```
+
+#### GET `/a2a/tasks` (ListTasks)
+
+Lists all tasks. Returns an empty list placeholder for the echo server.
+
+**curl Example**:
+```bash
+curl "https://echo.azurewebsites.net/api/a2a/tasks"
+```
+
+#### POST `/a2a/tasks/{id}:cancel` (CancelTask)
+
+Cancels a specific task. Returns a canceled status stub for testing.
+
+**curl Example**:
+```bash
+curl -X POST "https://echo.azurewebsites.net/api/a2a/tasks/task-123:cancel"
 ```
 
 ---
 
-### 5. Agent Card Discovery Endpoint (`/.well-known/agent-card.json`)
+### 6. Agent Card Discovery Endpoint (`/.well-known/agent-card.json`)
 
 A2A agent card for service discovery. Returns metadata about the echo server including the SendMessage endpoint.
 
