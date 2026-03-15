@@ -12,6 +12,20 @@ This server provides a simple, reliable endpoint for developers to test and vali
 https://echo.azurewebsites.net/api/
 ```
 
+## Table of Contents
+
+- [Endpoints](#endpoints)
+  - [Echo](#1-echo-endpoint-echo)
+  - [JSON-RPC](#2-json-rpc-endpoint-jsonrpc)
+  - [MCP](#3-mcp-endpoint-mcp)
+  - [MCP SSE](#mcp-sse-endpoint-mcp-sse)
+  - [A2A JSON-RPC](#4-agent2agent-a2a-json-rpc-endpoint-a2a)
+  - [A2A HTTP/REST](#5-agent2agent-a2a-httprest-endpoints-a2a)
+  - [Agent Card](#6-agent-card-discovery-endpoint-well-knownagent-cardjson)
+- [Testing Locally](#testing-locally)
+- [Use Cases](#use-cases)
+- [License](#license)
+
 ## Endpoints
 
 ### 1. Echo Endpoint (`/echo`)
