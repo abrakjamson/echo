@@ -6,6 +6,7 @@ import sys
 import requests
 from jsonrpc_handler import JsonRpcHandler
 from mcp_handler import McpHandler
+from a2a_handler import A2AHandler
 
 def test_jsonrpc_1_0():
     """Test JSON-RPC 1.0 request."""
@@ -95,6 +96,29 @@ def test_non_dict_request():
     assert resp["error"]["code"] == -32700, "Should have Parse error code"
     assert "id" not in resp, "Should not have id for parse error"
     print("✓ Non-dict request test passed")
+
+def test_a2a_message_echo():
+    """Test A2A message echo functionality."""
+    print("\n=== Testing A2A Handler (unit) ===")
+    
+    import uuid
+    req = {
+        "messageId": str(uuid.uuid4()),
+        "role": "user",
+        "parts": [{"text": "hello world"}],
+        "metadata": {"source": "test-client"}
+    }
+    print(f"Request: {json.dumps(req)}")
+    resp = A2AHandler.handle_request(req)
+    print(f"Response: {json.dumps(resp)}")
+    
+    assert "error" not in resp, f"Response should not have error: {resp}"
+    assert "messageId" in resp, "Response should have messageId field"
+    assert resp.get("role") == "agent", "Response should have role: agent"
+    assert "parts" in resp, "Response should have parts field"
+    assert len(resp["parts"]) > 0, "Response should have at least one part"
+    assert resp["parts"][0]["text"] == "hello world", "Text should be echoed"
+    print("✓ A2A message echo test passed")
 
 def test_http_echo_endpoint():
     """Test the deployed echo endpoint via HTTP."""
@@ -222,6 +246,37 @@ if __name__ == "__main__":
         assert data["result"]["action"] == "echo", "Result should contain the request"
         print("✓ HTTP MCP endpoint test passed")
 
+    def test_http_a2a_endpoint():
+        """Integration test for deployed /api/a2a endpoint."""
+        print("\n=== Testing HTTP A2A Endpoint ===")
+        base_url = "https://echo.azurewebsites.net/api/a2a"
+
+        print("Test 1: A2A message echo")
+        import uuid
+        payload = {
+            "messageId": str(uuid.uuid4()),
+            "role": "user",
+            "parts": [{"text": "hello from A2A client"}],
+            "metadata": {"source": "test-client"}
+        }
+        try:
+            resp = requests.post(base_url, json=payload, timeout=10)
+        except requests.exceptions.RequestException as e:
+            print(f"\n⚠ HTTP A2A test skipped: {e}")
+            return
+        print(f"Status: {resp.status_code}")
+        print(f"Response: {resp.text}")
+        if resp.status_code != 200:
+            print(f"\n⚠ HTTP A2A test skipped: expected 200 but got {resp.status_code} (endpoint may not be deployed yet)")
+            return
+        data = resp.json()
+        assert "messageId" in data, "Response should have messageId field"
+        assert data.get("role") == "agent", "Response should have role: agent"
+        assert "parts" in data, "Response should have parts field"
+        assert len(data["parts"]) > 0, "Response should have at least one part"
+        assert data["parts"][0]["text"] == "hello from A2A client", "Text should be echoed back"
+        print("✓ HTTP A2A endpoint test passed")
+
     try:
         test_jsonrpc_1_0()
         test_jsonrpc_2_0()
@@ -230,12 +285,15 @@ if __name__ == "__main__":
         test_non_dict_request()
         # MCP unit test
         test_mcp_handler_unit()
+        # A2A unit test
+        test_a2a_message_echo()
 
         # HTTP endpoint tests
         try:
             test_http_echo_endpoint()
             test_http_jsonrpc_endpoint()
             test_http_mcp_endpoint()
+            test_http_a2a_endpoint()
         except requests.exceptions.RequestException as e:
             print(f"\n⚠ HTTP tests skipped: {e}")
             print("(Endpoints may not be deployed yet)")

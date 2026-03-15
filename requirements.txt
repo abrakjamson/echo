@@ -3,3 +3,4 @@
 # azure-monitor-opentelemetry
 
 azure-functions
+a2a-sdk

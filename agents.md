@@ -1,6 +1,6 @@
-# Echo Server with JSON-RPC Support
+# Echo Server with JSON-RPC, MCP, and Agent2Agent Support
 
-A lightweight Azure Functions application that provides HTTP echo and JSON-RPC protocol endpoints.
+A lightweight Azure Functions application that provides HTTP echo, JSON-RPC, MCP (Model Context Protocol), and Agent2Agent (A2A) protocol endpoints.
 
 ## Public URL
 
@@ -12,8 +12,10 @@ https://echo.azurewebsites.net/api/
 
 ```
 echo_functions/
-├── function_app.py          # Azure Functions app with /echo and /jsonrpc routes
+├── function_app.py          # Azure Functions app with /echo, /jsonrpc, /mcp, and /a2a routes
 ├── jsonrpc_handler.py       # JSON-RPC 1.0 and 2.0 protocol handler
+├── mcp_handler.py           # MCP (Model Context Protocol) handler
+├── a2a_handler.py           # Agent2Agent protocol handler
 ├── test_endpoints.py        # Comprehensive test suite (local + HTTP)
 ├── requirements.txt         # Python dependencies
 ├── host.json               # Azure Functions configuration
@@ -33,12 +35,29 @@ echo_functions/
   - Returns responses with proper protocol compliance
   - Echoes back the full request in the result field
 
+- `@app.route("mcp", methods=["POST"])` - MCP endpoint
+  - Accepts MCP requests
+  - Echoes back the request in the result field
+
+- `@app.route("a2a", methods=["POST"])` - Agent2Agent endpoint
+  - Accepts A2A Protocol messages
+  - Returns messages with data echoed back
+
 **jsonrpc_handler.py**
 - `JsonRpcHandler.handle_request(req_body)` - Protocol parser and handler
   - Detects JSON-RPC version (1.0 or 2.0)
   - Validates required fields (method, id)
   - Generates proper error responses
   - Returns echo responses
+
+**mcp_handler.py**
+- `McpHandler.handle_request(req_body)` - MCP protocol handler
+
+**a2a_handler.py**
+- `A2AHandler.handle_request(req_body)` - A2A protocol handler
+  - Parses A2A Message objects using a2a-sdk
+  - Echoes the data field back in a new Message response
+  - Follows A2A Protocol v0.3.0 specification
 
 **test_endpoints.py**
 - Local unit tests (handler logic)
@@ -64,7 +83,8 @@ echo_functions/
    
    This runs:
    - 5 local unit tests (JSON-RPC handler logic)
-   - 6 live HTTP integration tests (if endpoints deployed)
+   - 2 local unit tests (MCP and A2A handlers)
+   - 7 live HTTP integration tests (if endpoints deployed)
    - Graceful fallback if endpoints unavailable
 
 3. **Expected output**
@@ -136,6 +156,13 @@ curl -X POST "https://echo.azurewebsites.net/api/jsonrpc" \
   -d '{"method":"test","params":{},"id":"1"}'
 ```
 
+**Test Agent2Agent (A2A)**
+```bash
+curl -X POST "https://echo.azurewebsites.net/api/a2a" \
+  -H "Content-Type: application/json" \
+  -d '{"data":{"message":"hello from A2A client"},"metadata":{"source":"test"}}'
+```
+
 ### Deployment
 
 Deploy to Azure Functions using the Azure CLI or Azure Functions extension:
@@ -158,14 +185,21 @@ func azure functionapp publish <app-name>
 - Notifications (requests without id)
 - Proper error codes (-32600, -32700, -32603)
 
+✅ **Agent2Agent (A2A) Support**
+- A2A Protocol v0.3.0 compliant
+- Accepts A2A Message objects
+- Echoes data back in response Message using official a2a-sdk
+
 ✅ **Testing**
 - 5 local unit tests for handler logic
-- 6 HTTP integration tests for deployed endpoints
+- 2 local unit tests for MCP and A2A handlers
+- 7 HTTP integration tests for deployed endpoints
 - All tests passing ✓
 
 ## Dependencies
 
 - `azure-functions` - Azure Functions Python SDK
+- `a2a-sdk` - Agent2Agent Protocol SDK
 - `requests` - HTTP client (for testing)
 - Python 3.9+
 
