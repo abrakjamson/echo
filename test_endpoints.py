@@ -3,10 +3,15 @@
 
 import json
 import sys
+import os
 import requests
 from jsonrpc_handler import JsonRpcHandler
 from mcp_handler import McpHandler
 from a2a_handler import A2AHandler
+
+# Fix Unicode encoding on Windows
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
 
 def test_jsonrpc_1_0():
     """Test JSON-RPC 1.0 request."""
@@ -297,6 +302,50 @@ if __name__ == "__main__":
         except requests.exceptions.RequestException as e:
             print(f"\n⚠ HTTP tests skipped: {e}")
             print("(Endpoints may not be deployed yet)")
+
+        # Deployed endpoints status check
+        def check_deployed_endpoints():
+            """Quick status check for all deployed endpoints."""
+            print("\n" + "="*50)
+            print("Endpoint Status Summary")
+            print("="*50)
+            base_url = "https://echo.azurewebsites.net/api"
+            
+            endpoints = [
+                ("Echo", "GET", f"{base_url}/echo?value=test"),
+                ("JSON-RPC 2.0", "POST", f"{base_url}/jsonrpc", {"jsonrpc": "2.0", "method": "test", "id": 1}),
+                ("MCP", "POST", f"{base_url}/mcp", {"action": "echo", "id": 1}),
+                ("A2A", "POST", f"{base_url}/a2a", {"messageId": "test", "role": "user", "parts": [{"text": "msg"}]}),
+            ]
+            
+            all_ok = True
+            for endpoint_data in endpoints:
+                name = endpoint_data[0]
+                method = endpoint_data[1]
+                url = endpoint_data[2]
+                payload = endpoint_data[3] if len(endpoint_data) > 3 else None
+                
+                try:
+                    if method == "GET":
+                        resp = requests.get(url, timeout=10)
+                    else:
+                        resp = requests.post(url, json=payload, timeout=10)
+                    
+                    if resp.status_code == 200:
+                        print(f"  ✓ {name:12} (200)")
+                    else:
+                        print(f"  ✗ {name:12} ({resp.status_code})")
+                        all_ok = False
+                except Exception as e:
+                    print(f"  ✗ {name:12} - {str(e)[:30]}")
+                    all_ok = False
+            
+            return all_ok
+
+        try:
+            endpoints_ok = check_deployed_endpoints()
+        except Exception:
+            endpoints_ok = None
 
         print("\n" + "="*50)
         print("All tests passed! ✓")

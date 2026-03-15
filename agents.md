@@ -85,6 +85,7 @@ echo_functions/
    - 5 local unit tests (JSON-RPC handler logic)
    - 2 local unit tests (MCP and A2A handlers)
    - 7 live HTTP integration tests (if endpoints deployed)
+   - Endpoint status summary (quick health check for all deployed endpoints)
    - Graceful fallback if endpoints unavailable
 
 3. **Expected output**
@@ -123,6 +124,22 @@ echo_functions/
    
    Test 3: JSON-RPC 2.0 notification (no id)
    ✓ JSON-RPC 2.0 notification test passed
+   
+   === Testing HTTP MCP Endpoint ===
+   Test 1: POST JSON body
+   ✓ HTTP MCP endpoint test passed
+   
+   === Testing HTTP A2A Endpoint ===
+   Test 1: A2A message echo
+   ✓ HTTP A2A endpoint test passed
+   
+   ==================================================
+   Endpoint Status Summary
+   ==================================================
+     ✓ Echo         (200)
+     ✓ JSON-RPC 2.0 (200)
+     ✓ MCP          (200)
+     ✓ A2A          (200)
    
    ==================================================
    All tests passed! ✓
